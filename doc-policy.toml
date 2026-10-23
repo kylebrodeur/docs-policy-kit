@@ -1,0 +1,148 @@
+# The kit's own manifest version (bumped when the manifest SHAPE changes).
+version = "0.1.0"
+
+# ============================================================
+# Mode 1: derived-copy sync (from a private ops layer's
+# docs-drift.py + tools/release/sync-guides.py)
+#
+# A private source tree is copied into a public repo's docs/ with
+# nothing changed but the declared link rewrites and strips. The
+# engine recomputes the expected public text; a copy that differs
+# is drift.
+#
+# In this kit the "private system repo" is itself, so the demo pair
+# derives from examples/private-source/ into examples/public/.
+# ============================================================
+[derived]
+mode = "derived-copy"
+
+# One row per repo pair: the private source tree, the public target
+# tree, the guides copied between them, and the rewrite rules.
+# In this kit the "private system repo" is itself, so the demo pair
+# derives from examples/private-source/ into examples/public/.
+[[derived.pairs]]
+name = "self-demo"
+# where the SOURCE truth lives, relative to the manifest's repo root
+source_dir = "examples/private-source"
+# where the DERIVED copies live
+target_dir = "examples/public"
+guides = ["quickstart.md", "RUNBOOK.md"]
+# the link rewrite: a private-relative link becomes the public URL
+base_url = "https://github.com/example/docs-policy/tree/main/docs"
+rewrites = [
+    { from = "(../private-source/quickstart.md)", to = "(https://github.com/example/docs-policy/tree/main/docs/quickstart.md)" },
+]
+# text removed from the public copy entirely (private design pointers)
+strips = [
+    "Design and the account rules: `docs/release/U9-PROJECT-SCAFFOLDING-DESIGN.md` in\nthe system repo.\n",
+]
+
+# ============================================================
+# Mode 2: allowlisted publication
+#
+# Only allowlisted paths are copied into the published tree, and
+# each is checked for content class AND for secret patterns
+# BEFORE anything is copied. One refusal aborts the whole run.
+# ============================================================
+[publish]
+allowlist = "examples/allowlist.json"
+source_dir = "examples/private-source"
+published_dir = "examples/public-published"
+readme_note = "Generated from the allowlist; do not edit as source of truth."
+# deny_segments / deny_names are OMITTED here: the engine's defaults
+# (DENIED_DIR_SEGMENTS / DENIED_FILENAME_PATTERNS) apply. Extend the
+# defaults in code (a review, not a manifest edit); a deployment
+# narrows them by declaring these keys.
+
+# ============================================================
+# Ruling guards
+#
+# One row per ruling: what must not exist (absent), what must
+# exist (require), what text must not appear (forbid). Kinds and
+# shapes are the reference guard's; the RULINGS here are this
+# kit's own.
+# ============================================================
+[[guard]]
+name = "no published copy hand-edited"
+source = "docs/how-to.md (the derived-copy rule)"
+why = "The published tree is GENERATED. Hand edits would be overwritten by the next sync and hide the drift the gate exists to catch."
+kind = "absent"
+targets = ["examples/public/hand-edit*"]
+
+[[guard]]
+name = "policy config present"
+source = "docs/DOC-STANDARD.md (the per-repo contract)"
+why = "The engine enforces nothing without its manifest; a missing one is a silent no-op."
+kind = "require"
+targets = ["doc-policy.toml"]
+
+[[guard]]
+name = "no private design pointers in public prose"
+source = "mode 1 strips (the private pointer rule)"
+why = "A public copy that still carries a private-system design pointer leaks the internal repo layout."
+kind = "forbid"
+targets = ["examples/public"]
+pattern = "docs/release/[A-Z0-9-]+\\.md"
+
+[[guard]]
+name = "no banned prose words in published guides"
+source = "DOC-STANDARD.md writing rule 7 (prose_banned)"
+why = "The published tree is public prose; it carries the same gate as every public markdown file in the family."
+kind = "forbid"
+targets = ["examples/public"]
+pattern = "(?i)\\b(robust|leverage|seamlessly|utilize)\\b"
+
+[[guard]]
+name = "no secrets in source docs"
+source = "mode 2 secret scan (the same patterns, on the source side)"
+why = "The secret gate fires at publish time on allowlisted files only; the guards lane covers EVERY markdown file under the source tree, allowed or not."
+kind = "forbid"
+targets = ["examples/private-source/.gitleaks.toml"]
+pattern = "sk_live_[A-Za-z0-9]{8,}"
+
+[[guard]]
+name = "internal docs stay internal"
+source = "the internal-by-construction rule (mode 1's denied set)"
+why = "Private design docs and decision notes are working material; a public tree must never gain a copy."
+kind = "absent"
+targets = ["examples/public/**/decisions.*", "examples/public/**/system-map*"]
+
+# ============================================================
+# The prose gate (DOC-STANDARD.md writing rules)
+# ============================================================
+[prose]
+# banned_words and banned_chars are CONFIG: the exact terms live
+# here, not in the engine, and the docs cite these key names.
+banned_words = ["robust", "leverage", "seamlessly", "utilize"]
+banned_chars = "\u2014\u2013"
+skip_patterns = [
+    "prose_banned",
+    "prose_skip_patterns",
+    "\\(the skip patterns exist for lines that DEFINE the rule",
+]
+
+# ============================================================
+# The audit
+# ============================================================
+[audit]
+source_dir = "docs"
+extensions = [".md"]
+lane_key = "docs"
+
+# ============================================================
+# Version-class data (the DOC-STANDARD rule: docs-only content is
+# a patch bump). The paths that are DOCS for this repo:
+# ============================================================
+[release]
+docs_paths = [
+    "README.md",
+    "AGENTS.md",
+    "llms.txt",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "docs/",
+    "skills/",
+    "examples/private-source/",
+    "examples/public/",
+]
+code_extensions = [".py", ".toml", ".lock", ".ts", ".js", ".mjs", ".sh", ".json"]

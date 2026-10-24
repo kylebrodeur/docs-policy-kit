@@ -1,0 +1,8 @@
+# docs-policy-kit mounts as `ecp docs`. The kit owns its own CLI
+# (`docpol`), so the whole surface is delegated: `ecp docs <anything...>`
+# goes to docpol's own parser, which owns the argument parsing.
+
+[passthrough]
+summary = "The documentation policy: what a repo's docs must carry"
+argv = ["uv", "run", "docpol"]
+requires = ["uv"]

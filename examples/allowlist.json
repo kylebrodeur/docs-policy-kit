@@ -1,0 +1,7 @@
+{
+ "description": "Relative paths under examples/private-source/ to copy into examples/public-published/ on publish. Entries are validated before any copy: internal classes are refused by name, and any file whose content matches the declared secret patterns is refused outright.",
+ "files": [
+  "quickstart.md",
+  "RUNBOOK.md"
+ ]
+}

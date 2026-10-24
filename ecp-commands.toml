@@ -1,0 +1,17 @@
+# docs-policy-kit mounts as `ecp docs-policy-kit`. The kit owns its own
+# CLI (`docpol`), so the whole surface is delegated: `ecp docs-policy-kit
+# <anything...>` goes to docpol's own parser, which owns the argument
+# parsing.
+#
+# There is NO `requires` here, and that is deliberate. `requires` names
+# the CONFIG KEYS a command needs, and the gate refuses the command
+# when one of them is unset. It does not name an executable. A manifest
+# that said `requires = ["uv"]` was asking for a config key named "uv",
+# and every mounted command failed with "docs-policy-kit is not
+# configured: missing uv" before it ever ran. A missing EXECUTABLE is
+# the executor's job, and it says so: "uv is not available on PATH",
+# exit 127.
+
+[passthrough]
+summary = "The documentation policy: what a repo's docs must carry"
+argv = ["uv", "run", "docpol"]
